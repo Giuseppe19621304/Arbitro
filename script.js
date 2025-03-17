@@ -26,16 +26,14 @@ function QuizApp() {
   });
   const [showResults, setShowResults] = React.useState(false);
   const [feedback, setFeedback] = React.useState(null);
-
-  // Icone semplici con emoji
-  const ICONS = {
-    CheckCircle: "✅", 
-    AlertTriangle: ⚠️",
-    ArrowRight: "➡️",
-    RotateCw: "🔄",
-    Trophy: "🏆"
-  };
-
+// Icone semplici con caratteri HTML
+const ICONS = {
+  CheckCircle: "✓", 
+  AlertTriangle: "⚠",
+  ArrowRight: "→",
+  RotateCw: "↻",
+  Trophy: "★"
+};
   // Handler per la selezione di una risposta
   const handleRispostaClick = (risposta) => {
     if (feedback) return; // Impedisci di cambiare risposta dopo il feedback
