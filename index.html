@@ -5,20 +5,280 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Regolamento Arbitri</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="style.css" rel="stylesheet">
-    <!-- Carica React -->
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <!-- Carica Babel per convertire JSX -->
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <style>
+        .btn-option:hover {
+            transform: translateY(-2px);
+        }
+        .correct {
+            background-color: #d1fae5;
+            border-color: #10b981;
+        }
+        .incorrect {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-500 to-indigo-700 min-h-screen p-4">
-    <div id="root"></div>
-    
-    <!-- File delle domande -->
+    <div id="quiz-container" class="bg-white rounded-xl shadow-2xl p-6 max-w-3xl mx-auto mt-10">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-indigo-800">Quiz del Regolamento</h1>
+            <div class="flex space-x-4">
+                <div class="flex items-center bg-green-100 rounded-full px-3 py-1">
+                    <span class="font-bold mr-1">✓</span>
+                    <span id="correct-count">0</span>
+                </div>
+                <div class="flex items-center bg-red-100 rounded-full px-3 py-1">
+                    <span class="font-bold mr-1">✗</span>
+                    <span id="incorrect-count">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="flex justify-between mb-1">
+                <span id="progress-text" class="text-sm font-medium text-indigo-800">1/10</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 10%"></div>
+            </div>
+        </div>
+
+        <div id="question-container" class="mb-8">
+            <div class="flex items-center mb-2">
+                <span id="question-number" class="bg-indigo-600 text-white font-bold px-3 py-1 rounded-lg mr-2">
+                    #1
+                </span>
+                <span id="rule-number" class="text-gray-600 text-sm">
+                    Regola 1
+                </span>
+            </div>
+            <p id="question-text" class="text-lg font-medium mb-6">
+                <!-- Domanda -->
+            </p>
+
+            <div class="space-y-3" id="options-container">
+                <!-- Le opzioni verranno inserite qui -->
+            </div>
+        </div>
+
+        <div id="feedback-container" class="hidden p-4 mb-6 rounded-lg shadow-md border-l-4">
+            <!-- Feedback -->
+        </div>
+
+        <div id="results-container" class="hidden mb-8 text-center">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 shadow-lg mb-6">
+                <h2 id="result-message" class="text-2xl font-bold mb-2"></h2>
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <div id="final-correct" class="font-bold text-2xl text-green-300">0</div>
+                        <div class="text-xs">Corrette</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <div id="final-incorrect" class="font-bold text-2xl text-red-300">0</div>
+                        <div class="text-xs">Errate</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <div id="final-percentage" class="font-bold text-2xl">0%</div>
+                        <div class="text-xs">Percentuale</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between">
+            <button id="restart-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
+                ↻ Ricomincia
+            </button>
+            <button id="next-btn" class="hidden px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold">
+                Prossima →
+            </button>
+        </div>
+    </div>
+
     <script src="domande.js"></script>
-    
-    <!-- Il componente React -->
-    <script type="text/babel" src="script.js"></script>
-</body>
-</html>
+    <script>
+        // Stato del quiz
+        let currentQuestionIndex = 0;
+        let correctAnswers = 0;
+        let incorrectAnswers = 0;
+        let selectedAnswer = null;
+        let quizCompleted = false;
+
+        // Elementi DOM
+        const questionContainer = document.getElementById('question-container');
+        const questionNumber = document.getElementById('question-number');
+        const ruleNumber = document.getElementById('rule-number');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const resultsContainer = document.getElementById('results-container');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const correctCount = document.getElementById('correct-count');
+        const incorrectCount = document.getElementById('incorrect-count');
+        const finalCorrect = document.getElementById('final-correct');
+        const finalIncorrect = document.getElementById('final-incorrect');
+        const finalPercentage = document.getElementById('final-percentage');
+        const resultMessage = document.getElementById('result-message');
+
+        // Inizializza il quiz
+        function initQuiz() {
+            currentQuestionIndex = 0;
+            correctAnswers = 0;
+            incorrectAnswers = 0;
+            selectedAnswer = null;
+            quizCompleted = false;
+            
+            updateCounts();
+            displayQuestion();
+            
+            resultsContainer.classList.add('hidden');
+            questionContainer.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            feedbackContainer.classList.add('hidden');
+        }
+
+        // Mostra la domanda corrente
+        function displayQuestion() {
+            const question = quizData[currentQuestionIndex];
+            
+            questionNumber.textContent = `#${question.numero}`;
+            ruleNumber.textContent = `Regola ${question.regola}`;
+            questionText.textContent = question.domanda;
+            
+            // Aggiorna la barra di progresso
+            progressBar.style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+            progressText.textContent = `${currentQuestionIndex + 1}/${quizData.length}`;
+            
+            // Pulisci le opzioni precedenti
+            optionsContainer.innerHTML = '';
+            
+            // Aggiungi le nuove opzioni
+            ['A', 'B', 'C'].forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'btn-option w-full p-4 text-left rounded-lg border-2 border-gray-300 hover:border-blue-400 transition-all';
+                button.innerHTML = `
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full mr-3 bg-gray-200 text-gray-700">
+                            <span class="font-bold">${option}</span>
+                        </div>
+                        <span class="font-medium">${question['risposta' + option]}</span>
+                    </div>
+                `;
+                
+                button.addEventListener('click', () => selectOption(option));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // Seleziona un'opzione
+        function selectOption(option) {
+            if (selectedAnswer !== null) return; // Già selezionata una risposta
+            
+            selectedAnswer = option;
+            const question = quizData[currentQuestionIndex];
+            const isCorrect = option === question.rispostaEsatta;
+            
+            // Aggiorna i contatori
+            if (isCorrect) {
+                correctAnswers++;
+            } else {
+                incorrectAnswers++;
+            }
+            updateCounts();
+            
+            // Evidenzia la risposta selezionata
+            const options = optionsContainer.querySelectorAll('.btn-option');
+            options.forEach((btn, idx) => {
+                const opt = ['A', 'B', 'C'][idx];
+                
+                if (opt === option) {
+                    btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+                } else if (opt === question.rispostaEsatta) {
+                    btn.classList.add('correct');
+                }
+            });
+            
+            // Mostra feedback
+            feedbackContainer.innerHTML = '';
+            feedbackContainer.classList.remove('hidden', 'border-l-green-500', 'border-l-red-500', 'bg-green-100', 'bg-red-100');
+            
+            if (isCorrect) {
+                feedbackContainer.classList.add('bg-green-100', 'border-l-green-500');
+                feedbackContainer.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-3xl mr-3">✓</span>
+                        <p class="text-lg font-bold text-green-800">Risposta corretta!</p>
+                    </div>
+                `;
+            } else {
+                feedbackContainer.classList.add('bg-red-100', 'border-l-red-500');
+                feedbackContainer.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-3xl mr-3">✗</span>
+                        <div>
+                            <p class="text-lg font-bold text-red-800">Risposta sbagliata</p>
+                            <p class="mt-1 text-green-700 font-medium">
+                                La risposta corretta è: ${question.rispostaEsatta}. ${question['risposta' + question.rispostaEsatta]}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Mostra il pulsante per continuare
+            nextBtn.classList.remove('hidden');
+            
+            // Aggiorna il testo del pulsante se è l'ultima domanda
+            if (currentQuestionIndex === quizData.length - 1) {
+                nextBtn.textContent = 'Vedi Risultati ★';
+            } else {
+                nextBtn.textContent = 'Prossima →';
+            }
+        }
+
+        // Passa alla domanda successiva
+        function nextQuestion() {
+            selectedAnswer = null;
+            feedbackContainer.classList.add('hidden');
+            
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                displayQuestion();
+                nextBtn.classList.add('hidden');
+            } else {
+                showResults();
+            }
+        }
+
+        // Mostra i risultati finali
+        function showResults() {
+            quizCompleted = true;
+            const percentage = Math.round((correctAnswers / quizData.length) * 100);
+            
+            finalCorrect.textContent = correctAnswers;
+            finalIncorrect.textContent = incorrectAnswers;
+            finalPercentage.textContent = `${percentage}%`;
+            
+            if (percentage >= 70) {
+                resultMessage.textContent = 'Ottimo lavoro!';
+            } else {
+                resultMessage.textContent = 'Continua a studiare!';
+            }
+            
+            questionContainer.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+        }
+
+        // Aggiorna i contatori
+        function updateCounts() {
+            correctCount.textContent = correctAnswers;
+            incorrectCount.textContent = incorrectAnswers;
+        }
+
+        // Event listeners
+        nextBtn.ad
